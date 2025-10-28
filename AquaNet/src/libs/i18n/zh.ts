@@ -40,27 +40,38 @@ const zhUser: typeof EN_REF_USER = {
   'UserHome.RemoveRival': "移除劲敌",
   'UserHome.InvalidGame': "游戏 ${game} 还不支持网页端查看。我们目前只支持舞萌、中二、华卡和音击。",
   'UserHome.ShowMoreRecent': "显示更多",
+  'UserHome.FavoriteSongs': "收藏歌曲"
 }
 
 const zhWelcome: typeof EN_REF_Welcome = {
   'back': '返回',
   'email': '邮箱',
   'password': '密码',
+  'new-password': '新密码',
   'username': '用户名',
   'welcome.btn-login': '登录',
   'welcome.btn-signup': '注册',
-  'welcome.email-password-missing': '邮箱和密码必须填哦',
+  'welcome.btn-reset-password': '忘记密码？',
+  'welcome.btn-submit-reset-password': '发送重置链接',
+  'welcome.btn-submit-new-password': '修改密码',
+  'welcome.email-missing': '邮箱必须填哦',
+  'welcome.password-missing': '密码必须填哦',
   'welcome.username-missing': '用户名/邮箱必须填哦',
+  'welcome.email-password-missing': '邮箱和密码必须填哦',
   'welcome.waiting-turnstile': '正在验证网络环境…',
   'welcome.turnstile-error': '验证网络环境出错了，请关闭 VPN 后重试',
   'welcome.turnstile-timeout': '验证网络环境超时了，请重试',
   'welcome.verification-sent': '验证邮件已发送至 ${email}，请翻翻收件箱',
+  'welcome.reset-password-sent': '重置邮件已发送至 ${email}，请翻翻收件箱',
   'welcome.verify-state-0': '您还没有验证邮箱哦！验证邮件一分钟内刚刚发到您的邮箱，请翻翻收件箱',
   'welcome.verify-state-1': '您还没有验证邮箱哦！我们在过去的 24 小时内已经发送了 3 封验证邮件，所以我们不会再发送了，请翻翻收件箱',
   'welcome.verify-state-2': '您还没有验证邮箱哦！我们刚刚又发送了一封验证邮件，请翻翻收件箱',
+  'welcome.reset-state-0': '重置邮件刚刚发送到你的邮箱啦，请翻翻收件箱!',
+  'welcome.reset-state-1': '邮件发送次数过多，暂时不会再发送新的重置邮件了',
   'welcome.verifying': '正在验证邮箱…请稍等',
   'welcome.verified': '您的邮箱已经验证成功！您现在可以登录了',
   'welcome.verification-failed': '验证失败：${message}。请重试',
+  'welcome.password-reset-done': '您的密码已更新！请重新登录',
 }
 
 const zhLeaderboard: typeof EN_REF_LEADERBOARD = {
@@ -84,6 +95,11 @@ const zhGeneral: typeof EN_REF_GENERAL = {
   "action.refresh": "刷新",
   "action.cancel": "取消",
   "action.confirm": "确认",
+  'navigation.profile': '个人资料',
+  'navigation.maps': '地图',
+  'navigation.home': '首页',
+  'navigation.rankings': '排行榜',
+  'navigation.notice': '公告'
 }
 
 const zhHome: typeof EN_REF_HOME = {
@@ -129,6 +145,9 @@ const zhHome: typeof EN_REF_HOME = {
   'home.setup.ask': "如果您有任何问题，请加入我们的",
   'home.setup.support': "以获取支持",
   'home.setup.keychip-tips': "这是你的狗号，不要与任何人分享",
+  'home.community.discord': 'Discord',
+  'home.community.telegram': 'Telegram (中文)',
+  'home.community.qq': 'QQ (中文)',
   'home.import.unknown-game': '未知游戏类型 (目前导入只支持舞萌和中二)',
   'home.import.new-data': '要导入的数据',
   'home.import.data-conflict': '继续导入将覆盖现有数据',
@@ -184,15 +203,26 @@ const zhSettings: typeof EN_REF_SETTINGS = {
   'settings.profile.location': '位置',
   'settings.profile.bio': '简介',
   'settings.profile.unset': '未设置',
+  'settings.profile.logout': '登出',
   'settings.profile.unchanged': '未更改',
   'settings.export': '导出玩家数据',
+  'settings.batchManualExport': "导出 Batch Manual 格式（用于 Tachi）",
   'settings.cabNotice': '注意：下面这些设置只会影响你自己的机器，如果你是在其他人的机器上玩的话，请联系机主来改设置',
   'settings.gameNotice': "这些设置仅对舞萌和华卡生效。",
+  // AI
+  'settings.regionNotice': "这些设置仅适用于舞萌、音击和中二。",
+  // AI
+  'settings.regionSelector.title': "地区选择器",
+  // AI
+  'settings.regionSelector.desc': "选择游戏中显示的地区",
+  // AI
+  'settings.regionSelector.select': "选择地区",
 }
 
 export const zhUserbox: typeof EN_REF_USERBOX = {
   'userbox.header.general': '游戏设置',
   'userbox.header.matching': '全国对战',
+  'userbox.header.matching.symbolChat': '全国对战聊天表情',
   'userbox.header.userbox': 'UserBox 设置',
   'userbox.header.preview': 'UserBox 预览',
   'userbox.nameplateId': '名牌',
@@ -219,6 +249,8 @@ export const zhUserbox: typeof EN_REF_USERBOX = {
   'userbox.matching.option.collab': '合作伙伴',
   'userbox.matching.custom.name': '自定义',
   'userbox.matching.custom.sub': '输入其他的匹配 URL',
+  'userbox.matching.symbolChat': '表情选择',
+  'userbox.matching.symbolChat.default': '默认',
 
   'userbox.new.name': 'AquaBox',
   'userbox.new.setup': '将中二（Lumi 或更高版本）的游戏文件夹拖放到下方区域，以显示带有名牌和头像的 UserBox。所有文件都在浏览器中处理。',
@@ -273,6 +305,7 @@ export const zhAquaTrans: typeof EN_REF_AQUATRANS = {
   'trans.btn.test': '测试连接',
   'trans.btn.export': '导出数据',
   'trans.btn.import': '导入数据',
+  'trans.blacklist': "这个服务器的服主把这个导出工具 ban 了，所以不能从这里导出",
 }
 
 

@@ -25,6 +25,7 @@ typealias SpecialHandler = RequestContext.() -> Any?
 fun BaseHandler.toSpecial() = { ctx: RequestContext -> handle(ctx.data) }
 
 typealias PagedHandler = RequestContext.() -> List<Any>
+typealias PagedExtraHandler = RequestContext.() -> Pair<List<Any>, JDict>
 typealias AddFn = RequestContext.() -> PagedProcessor
 typealias PagePost = (MutJDict) -> Unit
 data class PagedProcessor(val add: JDict?, val fn: PagedHandler, var post: PagePost? = null)
@@ -32,7 +33,10 @@ data class PagedProcessor(val add: JDict?, val fn: PagedHandler, var post: PageP
 // A very :3 way of declaring APIs
 abstract class MeowApi(val serialize: (String, Any) -> String) {
     val initH = mutableMapOf<String, SpecialHandler>()
-    infix operator fun String.invoke(fn: SpecialHandler) = initH.set("${this}Api", fn)
+    infix operator fun String.invoke(fn: SpecialHandler) {
+        if (initH.containsKey("${this}Api")) error("Duplicate API $this found! Someone is not smart 👀")
+        initH["${this}Api"] = fn
+    }
     infix fun String.static(fn: () -> Any) = serialize(this, fn()).let { resp -> this { resp } }
 
     // Page Cache: {cache key: (timestamp, full list)}
@@ -74,5 +78,22 @@ abstract class MeowApi(val serialize: (String, Any) -> String) {
     fun cleanupCache() {
         val minTime = millis() - (1000 * 60)
         pageCache.entries.removeIf { it.value.l < minTime }
+    }
+
+    // Used because maimai and ongeki does not actually require paging implementation
+    fun String.unpaged(key: String? = null, fn: PagedHandler) {
+        val k = key ?: (this.replace("Get", "").firstCharLower() + "List")
+        this {
+            val l = fn(this)
+            mapOf("userId" to uid, "nextIndex" to 0, "length" to l.size, k to l)
+        }
+    }
+
+    fun String.unpagedExtra(key: String? = null, fn: PagedExtraHandler) {
+        val k = key ?: (this.replace("Get", "").firstCharLower() + "List")
+        this {
+            val (l, e) = fn(this)
+            mapOf("userId" to uid, "nextIndex" to 0, "length" to l.size, k to l) + e
+        }
     }
 }

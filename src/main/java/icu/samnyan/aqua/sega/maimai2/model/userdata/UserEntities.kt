@@ -5,7 +5,7 @@ package icu.samnyan.aqua.sega.maimai2.model.userdata
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonPropertyOrder
+import ext.toJson
 import icu.samnyan.aqua.net.games.BaseEntity
 import icu.samnyan.aqua.net.games.IGenericGamePlaylog
 import icu.samnyan.aqua.net.games.IGenericUserMusic
@@ -16,6 +16,12 @@ import lombok.AllArgsConstructor
 import lombok.Data
 import lombok.NoArgsConstructor
 import java.time.LocalDateTime
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import java.time.format.DateTimeFormatter
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.core.JsonGenerator
+import java.time.LocalDate
 
 @MappedSuperclass
 open class Mai2UserEntity : BaseEntity(), IUserEntity<Mai2UserDetail> {
@@ -41,7 +47,6 @@ class Mai2MapEncountNpc : Mai2UserEntity() {
 
 @Table(name = "maimai2_user_activity")
 @Data @Entity
-@JsonPropertyOrder("kind", "id", "sortNumber", "param1", "param2", "param3", "param4")
 class Mai2UserAct : Mai2UserEntity() {
     var kind = 0
 
@@ -97,7 +102,6 @@ class Mai2UserCharacter : Mai2UserEntity() {
 
 @Table(name = "maimai2_user_charge", uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "charge_id"])])
 @Data @Entity
-@JsonPropertyOrder("chargeId", "stock", "purchaseDate", "validDate")
 class Mai2UserCharge : Mai2UserEntity() {
     @Column(name = "charge_id")
     var chargeId = 0
@@ -110,8 +114,6 @@ class Mai2UserCharge : Mai2UserEntity() {
 @Data @Entity
 class Mai2UserCourse : Mai2UserEntity() {
     var courseId = 0
-
-    @JsonProperty("isLastClear")
     var isLastClear = false
     var totalRestlife = 0
     var totalAchievement = 0
@@ -127,23 +129,6 @@ class Mai2UserCourse : Mai2UserEntity() {
 
 @Table(name = "maimai2_user_extend")
 @Data @Entity
-@JsonPropertyOrder(
-    "selectMusicId",
-    "selectDifficultyId",
-    "categoryIndex",
-    "musicIndex",
-    "extraFlag",
-    "selectScoreType",
-    "extendContentBit",
-    "isPhotoAgree",
-    "isGotoCodeRead",
-    "selectResultDetails",
-    "sortCategorySetting",
-    "sortMusicSetting",
-    "playStatusSetting",
-    "selectedCardList",
-    "encountMapNpcList"
-)
 class Mai2UserExtend : Mai2UserEntity() {
     var selectMusicId = 0
     var selectDifficultyId = 0
@@ -152,11 +137,7 @@ class Mai2UserExtend : Mai2UserEntity() {
     var extraFlag = 0
     var selectScoreType = 0
     var extendContentBit: Long = 0
-
-    @JsonProperty("isPhotoAgree")
     var isPhotoAgree = false
-
-    @JsonProperty("isGotoCodeRead")
     var isGotoCodeRead = false
     var selectResultDetails = false
     var sortCategorySetting = 0 //enum SortTabID
@@ -239,8 +220,6 @@ class Mai2UserItem : Mai2UserEntity() {
     var itemKind = 0
     var itemId = 0
     var stock = 0
-
-    @JsonProperty("isValid")
     var isValid = false
 }
 
@@ -265,32 +244,20 @@ enum class Mai2ItemKind(val id: Int) {
 
 @Table(name = "maimai2_user_login_bonus")
 @Data @Entity
-@JsonPropertyOrder("bonusId", "point", "isCurrent", "isComplete")
 class Mai2UserLoginBonus : Mai2UserEntity() {
     var bonusId = 0
     var point = 0
-
-    @JsonProperty("isCurrent")
     var isCurrent = false
-
-    @JsonProperty("isComplete")
     var isComplete = false
 }
 
 @Table(name = "maimai2_user_map")
 @Data @Entity
-@JsonPropertyOrder("mapId", "distance", "isLock", "isClear", "isComplete")
 class Mai2UserMap : Mai2UserEntity() {
     var mapId = 0
     var distance = 0
-
-    @JsonProperty("isLock")
     var isLock = false
-
-    @JsonProperty("isClear")
     var isClear = false
-
-    @JsonProperty("isComplete")
     var isComplete = false
 }
 
@@ -445,39 +412,19 @@ class Mai2UserPlaylog : Mai2UserEntity(), IGenericGamePlaylog {
     var breakGreat = 0
     var breakGood = 0
     var breakMiss = 0
-
-    @JsonProperty("isTap")
     var isTap = false
-
-    @JsonProperty("isHold")
     var isHold = false
-
-    @JsonProperty("isSlide")
     var isSlide = false
-
-    @JsonProperty("isTouch")
     var isTouch = false
-
-    @JsonProperty("isBreak")
     var isBreak = false
-
-    @JsonProperty("isCriticalDisp")
     var isCriticalDisp = false
-
-    @JsonProperty("isFastLateDisp")
     var isFastLateDisp = false
     var fastCount = 0
     var lateCount = 0
-
-    @JsonProperty("isAchieveNewRecord")
     var isAchieveNewRecord = false
-
-    @JsonProperty("isDeluxscoreNewRecord")
     var isDeluxscoreNewRecord = false
     var comboStatus = 0
     var syncStatus = 0
-
-    @JsonProperty("isClear")
     var isClear = false
     override var beforeRating: Int = 0
     override var afterRating: Int = 0
@@ -486,39 +433,34 @@ class Mai2UserPlaylog : Mai2UserEntity(), IGenericGamePlaylog {
     var afterGradeRank = 0
     var beforeDeluxRating = 0
     var afterDeluxRating = 0
-
-    @JsonProperty("isPlayTutorial")
     var isPlayTutorial = false
-
-    @JsonProperty("isEventMode")
     var isEventMode = false
-
-    @JsonProperty("isFreedomMode")
     var isFreedomMode = false
     var playMode = 0
-
-    @JsonProperty("isNewFree")
     var isNewFree = false
 
     var trialPlayAchievement = 0
-    var extNum1 = 0
-    var extNum2 = 0
-    var extNum4 = 0
+    var extNum1 = 0  // StartLife * 10000 + Life
+    var extNum2 = 0  // Course ID
+    var extNum4 = 0  // Select Category
 
-    @JsonProperty("extBool1")
-    var extBool1 = false
-    @JsonProperty("extBool2")
-    var extBool2 = false
+    var extBool1 = false  // Utage Coop
+    var extBool2 = false  // Random Select
+    var extBool3 = false  // Track Skip
 
     override val isFullCombo: Boolean
         get() = maxCombo == totalCombo
 
     override val isAllPerfect: Boolean
-        get() = tapMiss + tapGood + tapGreat == 0 && 
-            holdMiss + holdGood + holdGreat == 0 && 
-            slideMiss + slideGood + slideGreat == 0 && 
+        get() = tapMiss + tapGood + tapGreat == 0 &&
+            holdMiss + holdGood + holdGreat == 0 &&
+            slideMiss + slideGood + slideGreat == 0 &&
             touchMiss + touchGood + touchGreat == 0 &&
             breakMiss + breakGood + breakGreat == 0
+}
+
+fun main(args: Array<String>) {
+    println(Mai2UserPlaylog().toJson())
 }
 
 @Table(name = "maimai2_user_print_detail")
@@ -590,10 +532,14 @@ class Mai2UserKaleidx : Mai2UserEntity() {
     var totalDeluxscore = 0
     var bestAchievement = 0
     var bestDeluxscore = 0
+    @JsonSerialize(using = MaimaiDateSerializer::class)
     var bestAchievementDate: LocalDateTime? = null
+    @JsonSerialize(using = MaimaiDateSerializer::class)
     var bestDeluxscoreDate: LocalDateTime? = null
     var playCount = 0
+    @JsonSerialize(using = MaimaiDateSerializer::class)
     var clearDate: LocalDateTime? = null
+    @JsonSerialize(using = MaimaiDateSerializer::class)
     var lastPlayDate: LocalDateTime? = null
     var isInfoWatched = false
 }
@@ -604,4 +550,22 @@ class Mai2UserIntimate : Mai2UserEntity() {
     var partnerId = 1;
     var intimateLevel = 0;
     var intimateCountRewarded = 0;
+}
+
+@Entity(name = "Maimai2UserRegions")
+@Table(
+    name = "maimai2_user_regions",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "region_id"])]
+)
+class UserRegions : Mai2UserEntity() {
+    var regionId = 0
+    var playCount = 1
+    var created: String = LocalDate.now().toString()
+}
+
+val MAIMAI_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.0")
+class MaimaiDateSerializer : JsonSerializer<LocalDateTime>() {
+    override fun serialize(v: LocalDateTime, j: JsonGenerator, s: SerializerProvider) {
+        j.writeString(v.format(MAIMAI_DATETIME))
+    }
 }

@@ -7,6 +7,7 @@ import icu.samnyan.aqua.sega.chusan.ChusanData
 import icu.samnyan.aqua.sega.chusan.model.request.UserCMissionResp
 import icu.samnyan.aqua.sega.chusan.model.userdata.Chu3UserItem
 import icu.samnyan.aqua.sega.chusan.model.userdata.UserMusicDetail
+import icu.samnyan.aqua.sega.general.model.CardStatus
 import icu.samnyan.aqua.sega.general.model.response.UserRecentRating
 import java.time.format.DateTimeFormatter
 
@@ -82,9 +83,7 @@ fun ChusanController.chusanInit() {
     "GetUserCtoCPlay" { """{"userId":"${data["userId"]}","orderBy":"0","count":"0","userCtoCPlayList":[]}""" }
     "GetUserRivalMusic" { """{"userId":"${data["userId"]}","rivalId":"0","length":"0","nextIndex":"0","userRivalMusicList":[]}""" }
     "GetUserRivalData" { """{"userId":"${data["userId"]}","length":"0","userRivalData":[]}""" }
-    "GetUserRegion" { """{"userId":"${data["userId"]}","length":"0","userRegionList":[]}""" }
     "GetUserPrintedCard" { """{"userId":"${data["userId"]}","length":0,"nextIndex":-1,"userPrintedCardList":[]}""" }
-    "GetUserSymbolChatSetting" { """{"userId":"${data["userId"]}","length":"0","symbolChatInfoList":[]}""" }
 
     // Net battle data
     "GetUserNetBattleData" api@ {
@@ -97,6 +96,21 @@ fun ChusanController.chusanInit() {
         ))
     }
     "GetUserNetBattleRankingInfo" { """{"userId":"${data["userId"]}","length":"0","userNetBattleRankingInfoList":{}}""" }
+
+    "GetUserSymbolChatSetting".paged("symbolChatInfoList") {
+        fun Int.makeSymbols(order: Int) = (1..5).map {
+            mapOf(
+                "sceneId" to it,
+                "symbolChatId" to this,
+                "orderId" to order
+            )
+        }
+
+        db.userData.findByCard_ExtId(uid)()?.card?.aquaUser?.gameOptions?.run {
+            listOf(chusanSymbolChat1, chusanSymbolChat2, chusanSymbolChat3, chusanSymbolChat4)
+                .flatMapIndexed { i, sym -> sym?.makeSymbols(i) ?: empty }
+        } ?: empty
+    }
 
     // User handlers
     "GetUserData" {
@@ -211,7 +225,7 @@ fun ChusanController.chusanInit() {
         val option = db.userGameOption.findSingleByUser(user)()
         val userDict = user.toJson().jsonMap().filterKeys { it in userPreviewKeys }
 
-        mapOf(
+        val res = mutableMapOf(
             "userId" to uid, "isLogin" to false, "emoneyBrandId" to 0,
             "lastLoginDate" to user.lastLoginDate, "lastPlayDate" to user.lastPlayDate,
             "userCharacter" to chara,
@@ -220,6 +234,14 @@ fun ChusanController.chusanInit() {
             "headphone" to option?.headphone,
             "chargeState" to 1, "userNameEx" to "", "banState" to 0,
         ) + userDict
+
+        if (user.card?.status == CardStatus.MIGRATED_TO_MINATO) {
+            res["userName"] = "JiaQQqun / ChangeDNS"
+            res["rating"] = 0
+            res["playerLevel"] = 0
+        }
+
+        res
     }
 
     "GetUserMusic".paged("userMusicList") {
@@ -263,6 +285,12 @@ fun ChusanController.chusanInit() {
             "userId" to uid, "teamId" to 1, "teamRank" to 1, "teamName" to team,
             "userTeamPoint" to mapOf("userId" to uid, "teamId" to 1, "orderId" to 1, "teamPoint" to 1, "aggrDate" to playDate)
         )
+    }
+
+    "GetUserRegion" {
+        db.userRegions.findByUser_Card_ExtId(uid)
+            .map { mapOf("regionId" to it.regionId, "playCount" to it.playCount) }
+            .let { mapOf("userId" to uid, "userRegionList" to it) }
     }
 
     // Game settings
@@ -366,6 +394,13 @@ fun ChusanController.chusanInit() {
 //        }
 //        process()
 
-        """{"returnCode":"1"}"""
+        val user = db.userData.findByCard_ExtId(uid)()
+
+        if (user?.card?.status == CardStatus.MIGRATED_TO_MINATO) {
+            """{"returnCode":"0"}"""
+        }
+        else {
+            """{"returnCode":"1"}"""
+        }
     }
 }

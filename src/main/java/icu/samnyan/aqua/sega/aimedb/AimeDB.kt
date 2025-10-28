@@ -1,7 +1,7 @@
 package icu.samnyan.aqua.sega.aimedb
 
-import ext.logger
-import ext.toHex
+import ext.*
+import icu.samnyan.aqua.net.Fedy
 import icu.samnyan.aqua.net.db.AquaUserServices
 import icu.samnyan.aqua.sega.allnet.AllNetProps
 import icu.samnyan.aqua.sega.general.model.Card
@@ -15,7 +15,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets.US_ASCII
 import java.time.LocalDateTime
-import kotlin.jvm.optionals.getOrNull
 
 /**
  * @author samnyan (privateamusement@protonmail.com)
@@ -26,6 +25,7 @@ class AimeDB(
     val cardService: CardService,
     val us: AquaUserServices,
     val allNetProps: AllNetProps,
+    val fedy: Fedy,
 ): ChannelInboundHandlerAdapter() {
     val logger = logger()
 
@@ -68,9 +68,9 @@ class AimeDB(
      */
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         if (msg !is Map<*, *>) return
+        val type = msg["type"] as Int
+        val data = msg["data"] as ByteBuf
         try {
-            val type = msg["type"] as Int
-            val data = msg["data"] as ByteBuf
             val base = data.decodeHeader()
             val handler = handlers[type] ?: return logger.error("AimeDB: Unknown request type 0x${type.toString(16)}")
 
@@ -89,6 +89,7 @@ class AimeDB(
 
             handler.fn(data)?.let { ctx.write(it) }
         } finally {
+            data.release()
             ctx.flush()
             ctx.close()
         }
@@ -124,11 +125,9 @@ class AimeDB(
         }
     }
 
-    fun getCard(accessCode: String) = cardService.getCardByAccessCode(accessCode).getOrNull()?.let { card ->
-        // Update card access time
-        cardService.cardRepo.save(card.apply { accessTime = LocalDateTime.now() }).let {
-            it.aquaUser?.ghostCard ?: it
-        }?.extId
+    fun getCard(accessCode: String) = us.cardRepo.findByLuid(accessCode)()?.maybeGhost()?.let { card ->
+        // Update card access time and return the extId
+        us.cardRepo.save(card.apply { accessTime = LocalDateTime.now() }).extId
     } ?: -1
 
     /**
@@ -197,11 +196,13 @@ class AimeDB(
         var status = 0
         var aimeId = 0L
 
-        if (cardService.getCardByAccessCode(luid).isEmpty) {
+        if (us.cardRepo.findByLuid(luid).isEmpty) {
             val card: Card = cardService.registerByAccessCode(luid)
 
             status = 1
             aimeId = card.extId
+
+            fedy.onCardCreated(luid, card.extId)
         }
         else logger.warn("> Duplicated Aime Card Register detected, access code: $luid")
 

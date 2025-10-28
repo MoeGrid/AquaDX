@@ -20,6 +20,8 @@ class Wacca(
 ): GameApiController<WaccaUser>("wacca", WaccaUser::class) {
     override val settableFields: Map<String, (WaccaUser, String) -> Unit> by lazy { mapOf(
         "userName" to usernameCheck(WACCA_USERNAME_CHARS),
+
+        "lastRomVersion" to { u, v -> u.lastRomVersion = v },
     ) }
 
     override suspend fun trend(@RP username: String) = us.cardByName(username) { card ->
@@ -29,7 +31,10 @@ class Wacca(
 
     override suspend fun userSummary(@RP username: String, @RP token: String?) = us.cardByName(username) { card ->
         // TODO: Rating composition
-        genericUserSummary(card, mapOf())
+
+        val data = userDataRepo.findByCard_ExtId(card.extId)
+
+        genericUserSummary(card, mapOf(), null, if (data.isPresent) data.get().favoriteSongs else null)
     }
 
     override val shownRanks: List<Pair<Int, String>> = waccaScores.filter { it.first > 85 * 10000 }

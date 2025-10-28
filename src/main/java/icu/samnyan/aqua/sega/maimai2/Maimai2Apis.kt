@@ -3,20 +3,16 @@
 package icu.samnyan.aqua.sega.maimai2
 
 import ext.*
-import icu.samnyan.aqua.sega.general.PagedHandler
+import icu.samnyan.aqua.sega.general.model.CardStatus
 import icu.samnyan.aqua.sega.maimai2.model.UserRivalMusic
 import icu.samnyan.aqua.sega.maimai2.model.UserRivalMusicDetail
 import icu.samnyan.aqua.sega.maimai2.model.userdata.Mai2UserKaleidx
+import icu.samnyan.aqua.sega.maimai2.model.userdata.UserRegions
 import java.time.LocalDate
+import kotlin.random.Random
 
 fun Maimai2ServletController.initApis() {
-    // Used because maimai does not actually require paging implementation
-    fun String.unpaged(key: String? = null, fn: PagedHandler) {
-        val k = key ?: (this.replace("Get", "").firstCharLower() + "List")
-        this {
-            fn(this).let { mapOf("userId" to uid, "nextIndex" to 0, "length" to it.size, k to it) }
-        }
-    }
+    val log = logger()
 
     "GetUserExtend" { mapOf(
         "userId" to uid,
@@ -64,12 +60,6 @@ fun Maimai2ServletController.initApis() {
     ) }
 
     "CreateToken" static { """{"Bearer":"meow"}""" }
-    "UserLogin" static { mapOf(
-        "returnCode" to 1, "loginCount" to 1,
-        "lastLoginDate" to "2020-01-01 00:00:00.0",
-        "consecutiveLoginCount" to 0, "loginId" to 1,
-        "Bearer" to "meow", "bearer" to "meow"
-    ) }
 
     "CMUpsertUserPrintlog" static { """{"returnCode":1,"orderId":"0","serialId":"FAKECARDIMAG12345678"}""" }
 
@@ -100,7 +90,7 @@ fun Maimai2ServletController.initApis() {
         val d = db.userData.findByCardExtId(uid)() ?: (404 - "User not found")
         val option = db.userOption.findSingleByUser_Card_ExtId(uid)()
 
-        mapOf(
+        val res = mutableMapOf(
             "userId" to uid,
             "userName" to d.userName,
             "isLogin" to false,
@@ -123,6 +113,46 @@ fun Maimai2ServletController.initApis() {
             "isInherit" to false,
             "banState" to d.banState
         )
+
+        if (d.card?.status == CardStatus.MIGRATED_TO_MINATO) {
+            res["userName"] = "JiaQQqun / ChangeDNS"
+            res["dispRate"] = 1
+            res["playerRating"] = 66564
+            res["totalAwake"] = 7114
+        }
+
+        res
+    }
+
+    "UserLogin" {
+        val d = db.userData.findByCardExtId(uid)()
+
+        val res = mutableMapOf(
+            "returnCode" to 1, "loginCount" to 1,
+            "lastLoginDate" to "2020-01-01 00:00:00.0",
+            "consecutiveLoginCount" to 0, "loginId" to 1,
+            "Bearer" to "meow", "bearer" to "meow"
+        )
+
+        if (d?.card?.status == CardStatus.MIGRATED_TO_MINATO) {
+            res["returnCode"] = 0
+        }
+
+        // Get regionId from request
+        val region = data["regionId"] as? Int
+
+        // Only save if it is a valid region and the user has played at least a song
+        if (region != null && region > 0 && d != null) {
+            val region = db.userRegions.findByUserAndRegionId(d, region)?.apply {
+                playCount += 1
+            } ?: UserRegions().apply {
+                user = d
+                regionId = region
+            }
+            db.userRegions.save(region)
+        }
+
+        res
     }
 
     "GetUserShopStock" {
@@ -166,13 +196,19 @@ fun Maimai2ServletController.initApis() {
         mapOf("userId" to uid, "rivalId" to rivalId, "nextIndex" to 0, "userRivalMusicList" to res.values)
     }
 
+    "GetUserRegion" {
+        logger().info("Getting user regions for user $uid")
+        db.userRegions.findByUser_Card_ExtId(uid)
+            .map { mapOf("regionId" to it.regionId, "playCount" to it.playCount) }
+        .let { mapOf("userId" to uid, "length" to it.size, "userRegionList" to it) }
+    }
+
     "GetUserIntimate".unpaged {
         val u = db.userData.findByCardExtId(uid)() ?: (404 - "User not found")
         db.userIntimate.findByUser(u)
     }
 
     // Empty List Handlers
-    "GetUserRegion".unpaged { empty }
     "GetUserGhost".unpaged { empty }
     "GetUserFriendBonus" { mapOf("userId" to uid, "returnCode" to 0, "getMiles" to 0) }
     "GetTransferFriend" { mapOf("userId" to uid, "transferFriendList" to empty) }
@@ -277,14 +313,6 @@ fun Maimai2ServletController.initApis() {
         )
     }
 
-    "GetServerAnnouncement" static { mapOf(
-        "title" to "",
-        "announcement" to "",
-        "showOnIdle" to false,
-        "showOnUserLogin" to false,
-        "imageUrl" to "",
-    ) }
-
     "GetGameWeeklyData" static { mapOf(
         "gameWeeklyData" to mapOf(
             "missionCategory" to 0,
@@ -327,4 +355,71 @@ fun Maimai2ServletController.initApis() {
             "userRecommendSelectionMusicIdList" to (net.recommendedMusic[user.id] ?: empty)
         )
     }
+
+    "GetGameFesta" { mapOf(
+        "eventId" to 0,
+        "isRallyPeriod" to false,
+        "isCircleJoinNotAllowed" to false,
+        "jackingFestaSideId" to Random.nextInt(0, 3),
+        "festaSideDataList" to empty,
+    ) }
+
+    "GetPlaceCircleData" static { mapOf(
+        "returnCode" to 0,
+        "circleId" to 0,
+        "aggrDate" to ""
+    ) }
+
+    "GetUserCircleData" static { mapOf(
+        "circleId" to 0,
+        "circleName" to "一緒に歌おう！",
+        "isPlace" to false,
+        "circleClass" to 0,
+        "lastLoginDate" to "",
+        "circlePointRankingList" to empty
+    ) }
+
+    "GetUserCirclePointData" { mapOf(
+        "userId" to uid,
+        "aggrDate" to "",
+        "userCirclePointDataList" to empty
+    ) }
+
+    "GetUserCirclePointRanking" static { mapOf(
+        "circleId" to 0,
+        "circleName" to "一緒に歌おう！",
+        "aggrDate" to "",
+        "lastMonthCircleRank" to 0,
+        "lastMonthPoint" to 0
+    ) }
+
+    "GetUserFesta" static { mapOf(
+        "userFestaData" to mapOf(
+            "eventId" to 0,
+            "circleId" to 0,
+            "festaSideId" to 0,
+            "circleTotalFestaPoint" to 0,
+            "currentTotalFestaPoint" to 0,
+            "circleRankInFestaSide" to 0,
+            "circleRecordDate" to "",
+            "isDailyBonus" to false,
+            "participationRewardGet" to false,
+            "receivedRewardBorder" to 0
+        ),
+        "userResultFestaData" to mapOf(
+            "eventId" to 0,
+            "circleId" to 0,
+            "circleName" to "一緒に歌おう！",
+            "festaSideId" to 0,
+            "circleRankInFestaSide" to 0,
+            "receivedRewardBorder" to 0,
+            "circleTotalFestaPoint" to 0,
+            "resultRewardGet" to false,
+        )
+    ) }
+
+    "UpsertUserPlaceCircleRegist" static { mapOf(
+        "returnCode" to 0,
+        "apiName" to "UpsertUserPlaceCircleRegistApi"
+    ) }
 }

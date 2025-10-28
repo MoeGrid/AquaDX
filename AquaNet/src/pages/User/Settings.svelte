@@ -15,6 +15,7 @@
   import WaccaSettings from "../../components/settings/WaccaSettings.svelte";
   import GeneralGameSettings from "../../components/settings/GeneralGameSettings.svelte";
   import OngekiSettings from "../../components/settings/OngekiSettings.svelte";
+  import useLocalStorage from "../../libs/hooks/useLocalStorage.svelte";
 
   USER.ensureLoggedIn()
 
@@ -79,11 +80,12 @@
     // Don't know why this isn't just a part of the cropper module. Have to do this myself.. What a shame
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
-    canvas.width = 256;
-    canvas.height = 256;
+    const size = Math.round(Math.min(pfpCrop.width, pfpCrop.height, 1024));
+    canvas.width = size;
+    canvas.height = size;
     let img = document.createElement("img");
     img.onload = () => {
-      ctx?.drawImage(img, pfpCrop.x, pfpCrop.y, pfpCrop.width, pfpCrop.height, 0, 0, 256, 256);
+      ctx?.drawImage(img, pfpCrop.x, pfpCrop.y, pfpCrop.width, pfpCrop.height, 0, 0, size, size);
       canvas.toBlob(blob => {
         if (!blob) return;
         submitting = 'profilePicture'
@@ -120,6 +122,10 @@
         error = t("settings.profile.bad-format");
     }
   };
+  function logOut() {
+    localStorage.removeItem("token");
+    location.href = "/";
+  }
 
   const passwordAction = (node: HTMLInputElement, whether: boolean) => {
     if (whether) node.type = 'password'
@@ -194,6 +200,11 @@
             <span class="name">{ts(`settings.fields.optOutOfLeaderboard.name`)}</span>
             <span class="desc">{ts(`settings.fields.optOutOfLeaderboard.desc`)}</span>
           </label>
+        </div>
+      </div>
+      <div class="field m-t">
+        <div>
+          <button on:click={logOut}>{ts(`settings.profile.logout`)}</button>
         </div>
       </div>
     </div>
@@ -272,7 +283,7 @@
       object-fit: cover
       aspect-ratio: 1
 
-      
+
 
   .cropper-container
     position: relative
